@@ -3,6 +3,8 @@ import subprocess
 import sys
 import gi
 import threading
+import pexpect
+import wasp_connection
 
 # UI library
 gi.require_version('Gtk', '3.0')
@@ -56,7 +58,7 @@ class Companion(Gtk.Application):
 		# declare that the application is currently starting up. Certain variables are not available yet.
 
 		self.create_window()
-		self.threadW = threading.Thread(target=threadWasptool, args=[self])
+		self.threadW = wasp_connection.MainThread(self)
 
 		self.threadW.start()
 
@@ -76,8 +78,6 @@ class Companion(Gtk.Application):
 		self.o("lblInitializing").set_label(desc)
 		self.sync_desc_str = desc
 		self.sync_activity = active
-
-		print(self.sync_activity)
 
 	def create_window(self):
 		Gtk.init()
@@ -109,23 +109,6 @@ def o(name):
 			return app.objects[i]
 	return -1
 
-# Set the time
-def rtc():
-	app.set_syncing(True)
-	output=subprocess.check_output(['/app/bin/wasptool','--check-rtc'],universal_newlines=True)
-	if output.find("delta 0") >= 0:
-		print("time is already synced")
-	else:
-		app.set_syncing(True, desc="Syncing time...")
-		#output=subprocess.check_output(['/app/bin/wasptool','--rtc'],universal_newlines=True)
-		print(output)
-	app.set_syncing(False, desc="Done!")
-
-# Thread for calling wasptool
-def threadWasptool(app):
-	print("wasptool thread started")
-	rtc()
-	print("wasptool thread ended")
 
 if __name__ == "__main__":
 	global app
