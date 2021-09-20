@@ -5,6 +5,7 @@ import gi
 import threading
 import pexpect
 import wasp_connection
+import media_player
 
 # UI library
 gi.require_version('Gtk', '3.0')
@@ -59,8 +60,10 @@ class Companion(Gtk.Application):
 
 		self.create_window()
 		self.threadW = wasp_connection.MainThread(self)
+		self.threadP = media_player.MainThread(self)
 
 		self.threadW.start()
+		self.threadP.start()
 
 		self.in_startup = False
 
