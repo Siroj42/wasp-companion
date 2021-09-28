@@ -61,9 +61,11 @@ class Companion(Gtk.Application):
 		self.create_window()
 		self.threadW = wasp_connection.MainThread(self)
 		self.threadP = media_player.MainThread(self)
+		self.threadR = wasp_connection.ReconnectThread()
 
 		self.threadW.start()
 		self.threadP.start()
+		self.threadR.start()
 
 		self.in_startup = False
 
