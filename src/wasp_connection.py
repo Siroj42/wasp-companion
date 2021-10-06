@@ -4,13 +4,14 @@ import pexpect
 import time
 import json
 
-last_command = None
 
 class MainThread(threading.Thread):
 	def __init__(self, app_object, no_rtc=False):
 		global app
 		threading.Thread.__init__(self)
 		app = app_object
+		self.last_command = None
+		self.running = True
 		self.command_return = None
 		self.command_to_run = None
 		self.no_rtc = no_rtc
@@ -47,9 +48,17 @@ class MainThread(threading.Thread):
 				self.command_done_event.wait()
 				self.command_done_event.clear()
 
+		app.threadW.commandThread.kill_event.set()
+		print("Quitting console...")
+		self.c.sendcontrol('x')
+		self.running = False
+
 	def run_command(self, cmd):
+		print("Running command...")
 		self.command_to_run = cmd
 		self.commandThread.run_command_event.set()
+		time.sleep(0.05)
+		self.command_done_event.wait()
 
 class CommandThread(threading.Thread):
 	def __init__(self, parent):
@@ -61,10 +70,10 @@ class CommandThread(threading.Thread):
 		self.parent = parent
 
 	def run(self):
-		if last_command:
+		if self.parent.last_command:
 			self.run_command_event.set()
-			self.parent.command_to_run = last_command
-			last_command = None
+			self.parent.command_to_run = self.parent.last_command
+			self.parent.last_command = None
 		while not self.kill_event.is_set():
 			if self.run_command_event.is_set():
 				self.command_clear_event.wait()
@@ -73,7 +82,7 @@ class CommandThread(threading.Thread):
 					self.c.sendline(self.parent.command_to_run)
 					self.c.expect('>>> ')
 				except:
-					last_command = self.parent.command_to_run
+					self.parent.last_command = self.parent.command_to_run
 					app.threadR.reconnect_event.set()
 				self.run_command_event.clear()
 			self.parent.command_done_event.set()
@@ -88,7 +97,6 @@ class ReconnectThread(threading.Thread):
 		while not self.kill_event.is_set():
 			if self.reconnect_event.is_set():
 				app.set_syncing(False, "Lost connection!")
-				app.threadW.commandThread.kill_event.set()
 				app.threadW.kill_event.set()
 				for i in range(10):
 					app.set_syncing(False, "Retrying in " + str(10-i) + " seconds")

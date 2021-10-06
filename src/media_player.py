@@ -1,5 +1,6 @@
 import threading
 import gi
+import time
 
 gi.require_version('Playerctl', '2.0')
 from gi.repository import Playerctl, GLib
@@ -47,6 +48,10 @@ def on_player_appeared(manager, name):
 	thread.current_player.connect('metadata', on_metadata_change, thread.manager)
 
 	on_metadata_change(None, None, None)
+	if thread.current_player.get_property("playback-status") == Playerctl.PlaybackStatus(0):
+		on_play(None, None, None)
+	else:
+		on_pause(None, None, None)
 
 	thread.manager.manage_player(thread.current_player)
 
@@ -62,4 +67,7 @@ def on_pause(player, status, manager):
 def on_metadata_change(player, metadata, manager):
 	artist = thread.current_player.get_artist()
 	track = thread.current_player.get_title()
-	app.threadW.run_command(pc_music_commands["info"].format(artist=artist, track=track))
+	if artist and track:
+		app.threadW.run_command(pc_music_commands["info"].format(artist=artist.replace('"','\\"'), track=track.replace('"','\\"')))
+	else:
+		app.threadW.run_command(pc_music_commands["info"].format(artist="", track=""))

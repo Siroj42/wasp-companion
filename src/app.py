@@ -51,6 +51,12 @@ class Companion(Gtk.Application):
 			flags=Gio.ApplicationFlags.FLAGS_NONE)
 		self.window = None
 
+	def quit(self):
+		self.threadW.kill_event.set()
+		while self.threadW.running:
+			pass
+		Gtk.Application.quit(self)
+
 	def do_startup(self):
 		Gtk.Application.do_startup(self)
 		self.hold()
