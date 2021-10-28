@@ -28,8 +28,8 @@ class MainThread(threading.Thread):
 		for name in self.manager.props.player_names:
 			on_player_appeared(self.manager, name)
 
-		main = GLib.MainLoop()
-		main.run()
+		self.main = GLib.MainLoop()
+		self.main.run()
 
 	def process_watchcmd(self, n):
 		if n == "pause":
@@ -40,6 +40,9 @@ class MainThread(threading.Thread):
 			self.current_player.next()
 		elif n == "previous":
 			self.current_player.previous()
+
+	def quit(self):
+		self.main.quit()
 
 def on_player_appeared(manager, name):
 	thread.current_player = Playerctl.Player.new_from_name(name)
