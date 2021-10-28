@@ -4,9 +4,10 @@ import pexpect
 import time
 import json
 
+expect_command = 'print(">>>>", {cmd})'
 
 class MainThread(threading.Thread):
-	def __init__(self, app_object, no_rtc=False):
+	def __init__(self, app_object, no_rtc=False, last_command=None):
 		global app
 		threading.Thread.__init__(self)
 		app = app_object
@@ -14,6 +15,7 @@ class MainThread(threading.Thread):
 		self.running = True
 		self.command_return = None
 		self.command_to_run = None
+		self.last_command = last_command
 		self.no_rtc = no_rtc
 		self.kill_event = threading.Event()
 		self.command_done_event = threading.Event()
@@ -53,12 +55,17 @@ class MainThread(threading.Thread):
 		self.c.sendcontrol('x')
 		self.running = False
 
-	def run_command(self, cmd):
+	def run_command(self, cmd, expect_return=False):
 		print("Running command...")
 		self.command_to_run = cmd
+		self.commandThread.expect_return = expect_return
+		if expect_return:
+			self.command_return = None
 		self.commandThread.run_command_event.set()
 		time.sleep(0.05)
 		self.command_done_event.wait()
+		if expect_return:
+			return self.command_return
 
 class CommandThread(threading.Thread):
 	def __init__(self, parent):
@@ -68,6 +75,7 @@ class CommandThread(threading.Thread):
 		self.command_clear_event = threading.Event()
 		self.c = parent.c
 		self.parent = parent
+		self.expect_return = False
 
 	def run(self):
 		if self.parent.last_command:
@@ -77,9 +85,15 @@ class CommandThread(threading.Thread):
 		while not self.kill_event.is_set():
 			if self.run_command_event.is_set():
 				self.command_clear_event.wait()
-				print(self.parent.command_to_run)
 				try:
-					self.c.sendline(self.parent.command_to_run)
+					if self.expect_return:
+						self.c.sendline(self.parent.command_to_run)
+						self.c.expect(self.parent.command_to_run)
+						self.c.expect('\n')
+						self.c.expect('\w+', timeout=1)
+						self.parent.command_return = self.c.match.group()
+					else:
+						self.c.sendline(self.parent.command_to_run)
 					self.c.expect('>>> ')
 				except:
 					self.parent.last_command = self.parent.command_to_run
@@ -96,12 +110,13 @@ class ReconnectThread(threading.Thread):
 	def run(self):
 		while not self.kill_event.is_set():
 			if self.reconnect_event.is_set():
+				last_command = app.threadW.last_command
 				app.set_syncing(False, "Lost connection!")
 				app.threadW.kill_event.set()
 				for i in range(10):
 					app.set_syncing(False, "Retrying in " + str(10-i) + " seconds")
 					time.sleep(1)
-				app.threadW = MainThread(app, no_rtc=True)
+				app.threadW = MainThread(app, no_rtc=True, last_command=last_command)
 				app.threadW.start()
 				self.reconnect_event.clear()
 
