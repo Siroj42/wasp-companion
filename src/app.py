@@ -6,6 +6,7 @@ import threading
 import pexpect
 import wasp_connection
 import media_player
+import notifications
 
 # UI library
 gi.require_version('Gtk', '3.0')
@@ -53,6 +54,8 @@ class Companion(Gtk.Application):
 
 	def quit(self):
 		self.threadW.kill_event.set()
+		self.threadP.quit()
+		self.threadN.quit()
 		while self.threadW.running:
 			pass
 		Gtk.Application.quit(self)
@@ -68,10 +71,12 @@ class Companion(Gtk.Application):
 		self.threadW = wasp_connection.MainThread(self)
 		self.threadP = media_player.MainThread(self)
 		self.threadR = wasp_connection.ReconnectThread()
+		self.threadN = notifications.MainThread(self)
 
 		self.threadW.start()
 		self.threadP.start()
 		self.threadR.start()
+		self.threadN.start()
 
 		self.in_startup = False
 
