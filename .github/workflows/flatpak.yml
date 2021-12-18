@@ -1,0 +1,22 @@
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+name: CI
+jobs:
+  flatpak:
+    name: "Flatpak"
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-40
+      options: --privileged
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - uses: bilelmoussaoui/flatpak-github-actions/flatpak-builder@v4
+      with:
+        bundle: wasp-companion.flatpak
+        manifest-path: flatpak/com.arteeh.Companion.yml
+        cache-key: flatpak-builder-${{ github.sha }}
