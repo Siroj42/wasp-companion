@@ -50,7 +50,7 @@ class MainThread(threading.Thread):
 				self.command_done_event.wait()
 				self.command_done_event.clear()
 
-		app.threadW.commandThread.kill_event.set()
+		self.commandThread.kill_event.set()
 		print("Quitting console...")
 		self.c.sendcontrol('x')
 		self.running = False
@@ -97,7 +97,7 @@ class CommandThread(threading.Thread):
 					self.c.expect('>>> ')
 				except:
 					self.parent.last_command = self.parent.command_to_run
-					app.threadR.reconnect_event.set()
+					app.threadR.reconnect(countdown=10)
 				self.run_command_event.clear()
 			self.parent.command_done_event.set()
 			self.command_clear_event.clear()
@@ -113,12 +113,15 @@ class ReconnectThread(threading.Thread):
 				last_command = app.threadW.last_command
 				app.set_syncing(False, "Lost connection!")
 				app.threadW.kill_event.set()
-				for i in range(10):
+				for i in range(self.countdown):
 					app.set_syncing(False, "Retrying in " + str(10-i) + " seconds")
 					time.sleep(1)
 				app.threadW = MainThread(app, no_rtc=True, last_command=last_command)
 				app.threadW.start()
 				self.reconnect_event.clear()
+	def reconnect(self, countdown=0):
+		self.countdown = countdown
+		self.reconnect_event.set()
 
 def rtc():
 	app.set_syncing(True)

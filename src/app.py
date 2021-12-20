@@ -45,6 +45,10 @@ class Handler:
 		o("windowAbout").hide()
 		return True
 
+	def _btnReconnect(self, *args):
+		app.threadR.reconnect()
+		return True
+
 class Companion(Gtk.Application):
 	def __init__(self):
 		Gtk.Application.__init__(self,
