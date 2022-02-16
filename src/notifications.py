@@ -22,8 +22,10 @@ class MainThread(threading.Thread):
 		self.serials = []
 		self.notifs = {}
 		threading.Thread.__init__(self)
+		self.waspconn_ready_event = threading.Event()
 
 	def run(self):
+		self.waspconn_ready_event.wait()
 		self.notif_dbus = self.session_bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications')
 		self.fd_dbus = self.session_bus.get_object('org.freedesktop.DBus', '/org/freedesktop/DBus')
 		self.fd_dbus.BecomeMonitor(

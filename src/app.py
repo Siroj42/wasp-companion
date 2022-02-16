@@ -72,7 +72,12 @@ class Companion(Gtk.Application):
 		# declare that the application is currently starting up. Certain variables are not available yet.
 
 		self.create_window()
-		self.threadW = wasp_connection.MainThread(self)
+		self.select_device()
+
+	def connect(self, action_row, device_mac):
+		self.device_selector_window.close()
+
+		self.threadW = wasp_connection.MainThread(self, device_mac=device_mac)
 		self.threadP = media_player.MainThread(self)
 		self.threadR = wasp_connection.ReconnectThread()
 		self.threadN = notifications.MainThread(self)
@@ -109,12 +114,30 @@ class Companion(Gtk.Application):
 		self.objects = builder.get_objects()
 		self.window = self.o("window")
 		self.window.set_application(self)
+		self.device_selector_window = self.o("device_selector_window")
+		self.device_selector_window.set_transient_for(self.window)
 
 		if not self.in_startup:
 			# skip in startup because sync_activity and sync_desc_str are not available yet
 			self.set_syncing(self.sync_activity, self.sync_desc_str)
 
 		self.window.show_all()
+
+	def select_device(self):
+		self.device_selector_window.show_all()
+
+		self.threadS = wasp_connection.ScanThread(self)
+		self.threadS.start()
+
+	def on_device_scanned(self, name, address, type="nus"):
+		devrow = Handy.ActionRow()
+		devrow.set_title(name)
+		devrow.set_subtitle(address)
+		devrow.set_activatable_widget(devrow)
+		devrow.set_activatable_widget(None)
+		devrow.connect("activated", self.connect, address)
+		self.o("device_selector_device_list").insert(devrow, 0)
+		devrow.show()
 
 	def o(self, name):
 		for i in range(0, len(self.objects)):

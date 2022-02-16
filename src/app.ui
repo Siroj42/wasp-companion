@@ -50,6 +50,48 @@
       </object>
     </child>
   </object>
+  <object class="HdyWindow" id="device_selector_window">
+    <property name="name">device_selector_window</property>
+    <property name="can-focus">False</property>
+    <property name="window-position">center-on-parent</property>
+    <property name="modal">True</property>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="HdyHeaderBar">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="show-close-button">True</property>
+            <property name="centering-policy">strict</property>
+            <child type="title">
+              <object class="GtkLabel" id="device_selector_window_title">
+                <property name="name">device_selector_window_title"</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">&lt;b&gt;Select Device&lt;/b&gt;</property>
+                <property name="use-markup">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkListBox" id="device_selector_device_list">
+            <property name="name">device_selector_device_list</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="selection-mode">none</property>
+            <property name="margin">10</property>
+            <style>
+              <class name="content"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="HdyApplicationWindow" id="window">
     <property name="name">window</property>
     <property name="can-focus">False</property>

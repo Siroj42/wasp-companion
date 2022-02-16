@@ -3,11 +3,12 @@ import threading
 import pexpect
 import time
 import json
+from pynus import tealblue
 
 expect_command = 'print(">>>>", {cmd})'
 
 class MainThread(threading.Thread):
-	def __init__(self, app_object, no_rtc=False, last_command=None):
+	def __init__(self, app_object, no_rtc=False, last_command=None, device_mac=None):
 		global app
 		threading.Thread.__init__(self)
 		app = app_object
@@ -17,6 +18,7 @@ class MainThread(threading.Thread):
 		self.command_to_run = None
 		self.last_command = last_command
 		self.no_rtc = no_rtc
+		self.device_mac = device_mac
 		self.kill_event = threading.Event()
 		self.command_done_event = threading.Event()
 
@@ -24,12 +26,12 @@ class MainThread(threading.Thread):
 		print("starting wasptool thread...")
 
 		if not self.no_rtc:
-			rtc()
+			rtc(self.device_mac)
 			print("finished syncing time! connecting to REPL...")
 		else:
 			app.set_syncing(False, desc="Done!")
 
-		self.c = pexpect.spawn('./wasptool --console', encoding='UTF-8')
+		self.c = pexpect.spawn('./wasptool --console --device=' + str(self.device_mac), encoding='UTF-8')
 		self.c.expect('Connect.*\(([0-9A-F:]*)\)')
 		self.c.expect('Exit console using Ctrl-X')
 		print("connected to REPL!")
@@ -38,6 +40,7 @@ class MainThread(threading.Thread):
 		self.commandThread.start()
 
 		app.threadP.waspconn_ready_event.set()
+		app.threadN.waspconn_ready_event.set()
 
 		while not self.kill_event.is_set():
 			try:
@@ -116,20 +119,33 @@ class ReconnectThread(threading.Thread):
 				for i in range(self.countdown):
 					app.set_syncing(False, "Retrying in " + str(10-i) + " seconds")
 					time.sleep(1)
-				app.threadW = MainThread(app, no_rtc=True, last_command=last_command)
+				app.threadW = MainThread(app, no_rtc=True, last_command=last_command, device_mac="E9:83:D7:36:3D:0E") #TODO: Need to get device_mac from database or sth.
 				app.threadW.start()
 				self.reconnect_event.clear()
 	def reconnect(self, countdown=0):
 		self.countdown = countdown
 		self.reconnect_event.set()
 
-def rtc():
+class ScanThread(threading.Thread):
+	def __init__(self, app):
+		threading.Thread.__init__(self)
+		self.kill_event = threading.Event()
+		self.app = app
+	def run(self):
+		NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+		adapter = tealblue.TealBlue().find_adapter()
+		with adapter.scan() as scanner:
+			for device in scanner:
+				if NUS_SERVICE_UUID in device.UUIDs:
+					self.app.on_device_scanned(device.name, device.address)
+
+def rtc(device_mac):
 	app.set_syncing(True)
-	output=subprocess.check_output(['/app/bin/wasptool','--check-rtc'],universal_newlines=True)
+	output=subprocess.check_output(['/app/bin/wasptool','--check-rtc', '--device=' + device_mac],universal_newlines=True)
 	if output.find("delta 0") >= 0:
 		print("time is already synced")
 	else:
 		app.set_syncing(True, desc="Syncing time...")
-		output=subprocess.check_output(['/app/bin/wasptool','--rtc'],universal_newlines=True)
+		output=subprocess.check_output(['/app/bin/wasptool','--rtc', '--device=' + device_mac],universal_newlines=True)
 		print(output)
 	app.set_syncing(False, desc="Done!")
