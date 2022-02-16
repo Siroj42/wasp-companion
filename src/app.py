@@ -129,13 +129,21 @@ class Companion(Gtk.Application):
 		self.threadS = wasp_connection.ScanThread(self)
 		self.threadS.start()
 
-	def on_device_scanned(self, name, address, type="nus"):
+	def on_device_scanned(self, name, address, type="nus", version="0"):
 		devrow = Handy.ActionRow()
 		devrow.set_title(name)
-		devrow.set_subtitle(address)
 		devrow.set_activatable_widget(devrow)
 		devrow.set_activatable_widget(None)
-		devrow.connect("activated", self.connect, address)
+		if type=="nus":
+			devrow.set_subtitle("Wasp-OS")
+			devrow.connect("activated", self.connect, address)
+		elif type=="infinitime":
+			devrow.set_subtitle("InfiniTime")
+			devrow.connect("activated", print, "There currently is no way to connect to InfiniTime devices")
+		elif type=="dfu":
+			devrow.set_subtitle("Wasp-OS (Bootloader)")
+			devrow.connect("activated", print, "There currently is no way to connect to the Wasp-OS Bootloader")
+
 		self.o("device_selector_device_list").insert(devrow, 0)
 		devrow.show()
 

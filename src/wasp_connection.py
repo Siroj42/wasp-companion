@@ -132,12 +132,20 @@ class ScanThread(threading.Thread):
 		self.kill_event = threading.Event()
 		self.app = app
 	def run(self):
-		NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+		WASP_NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+		DFU_SERVICE_UUID = '00001530-1212-efde-1523-785feabcd123'
 		adapter = tealblue.TealBlue().find_adapter()
 		with adapter.scan() as scanner:
 			for device in scanner:
-				if NUS_SERVICE_UUID in device.UUIDs:
+				if self.kill_event.is_set():
+					return
+				if WASP_NUS_SERVICE_UUID in device.UUIDs:
 					self.app.on_device_scanned(device.name, device.address)
+				elif DFU_SERVICE_UUID in device.UUIDs:
+					if device.name.startswith("InfiniTime") or device.name.startswith("Pinetime-JF") or device.name.startswith("PineTime") or device.name.startswith("Y7S"):
+						self.app.on_device_scanned(device.name, device.address, type="infinitime")
+					elif device.name.startswith("PineDFU"):
+						self.app.on_device_scanned(device.name, device.address, type="dfu")
 
 def rtc(device_mac):
 	app.set_syncing(True)
