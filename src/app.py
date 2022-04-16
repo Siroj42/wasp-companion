@@ -57,11 +57,22 @@ class Companion(Gtk.Application):
 		self.window = None
 
 	def quit(self):
-		self.threadW.kill_event.set()
-		self.threadP.quit()
-		self.threadN.quit()
-		while self.threadW.running:
-			pass
+		try:
+			self.threadW.kill_event.set()
+		except:
+			print("threadW is not running yet")
+		try:
+			self.threadP.quit()
+		except:
+			print("threadP is not running yet")
+		try:
+			self.threadN.quit()
+		except:
+			print("threadN is not running yet")
+		try:
+			self.threadW.join()
+		except:
+			print("threadW is not running yet")
 		Gtk.Application.quit(self)
 
 	def do_startup(self):
