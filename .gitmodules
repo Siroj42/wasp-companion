@@ -1,6 +1,6 @@
 [submodule "src/pynus"]
 	path = src/pynus
-	url = https://github.com/daniel-thompson/pynus.git
+	url = https://github.com/Siroj42/pynus
 
 [submodule "flatpak/flatpak-builder-tools"]
 	path = flatpak/flatpak-builder-tools
