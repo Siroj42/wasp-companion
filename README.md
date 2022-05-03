@@ -28,15 +28,10 @@ I've made a simple helper script to automate the build process of this project. 
 
 To rebuild modules (`./flatpak -m`), you need `pip3` installed locally.
 
-### About me
-
-I've been casually hanging around the PineTime community since about November 2019, talking to people in the chat. I've made [UI designs and mockups for a PineTime operating system](https://www.github.com/arteeh/pinetime), and I've built [a GTK app in C in which you can flash the PineTime using an ST-Link](https://github.com/arteeh/pinetime-flasher).
-
-On Matrix I'm @arteeh:matrix.org and you can otherwise find me using the links on [my website](https://www.arteeh.com/).
-
 ### Credits
 
 - [Daniel Thompson](https://github.com/daniel-thompson) for creating wasptool and its dependencies, which this app uses in the background.
+- [Maarten de Jong](https://github.com/daniel-thompson) for writing the first 61 lines of code.
 
 ### Useful links
 
