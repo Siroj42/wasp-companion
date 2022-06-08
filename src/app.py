@@ -6,6 +6,8 @@ import threading
 import pexpect
 import wasp_connection
 import media_player
+import json
+from pathlib import Path
 import notifications
 
 # UI library
@@ -57,11 +59,35 @@ class Companion(Gtk.Application):
 		self.window = None
 
 	def quit(self):
-		self.threadW.kill_event.set()
-		self.threadP.quit()
-		self.threadN.quit()
-		while self.threadW.running:
-			pass
+		config_path = Path(GLib.get_user_config_dir() + "/wasp-companion.json")
+		with open(config_path, "w") as f:
+			json.dump(self.config, f)
+		try:
+			self.threadW.kill_event.set()
+		except:
+			print("threadW is not running yet")
+		try:
+			self.threadR.kill_event.set()
+		except:
+			print("threadR is not running yet")
+		try:
+			self.threadP.quit()
+		except:
+			print("threadP is not running yet")
+		try:
+			self.threadN.quit()
+		except:
+			print("threadN is not running yet")
+		try:
+			print("Trying to join threadR...")
+			self.threadR.join()
+		except:
+			print("threadR is not running yet")
+		try:
+			print("Trying to join threadW...")
+			self.threadW.join()
+		except:
+			print("threadW is not running yet")
 		Gtk.Application.quit(self)
 
 	def do_startup(self):
@@ -71,10 +97,26 @@ class Companion(Gtk.Application):
 		self.in_startup = True
 		# declare that the application is currently starting up. Certain variables are not available yet.
 
+		config_path = Path(GLib.get_user_config_dir() + "/wasp-companion.json")
+		if config_path.is_file():
+			with open(config_path, "r") as f:
+				self.config = json.load(f)
+		else:
+			self.config = {"version": 1, "last_device": ""}
+			with open(config_path, "w+") as f:
+				json.dump(self.config, f)
+
 		self.create_window()
-		self.threadW = wasp_connection.MainThread(self)
+		self.select_device()
+
+	def connect(self, action_row, device_mac):
+		self.device_selector_window.close()
+
+		self.config["last_device"] = device_mac
+
+		self.threadW = wasp_connection.MainThread(self, device_mac=device_mac)
 		self.threadP = media_player.MainThread(self)
-		self.threadR = wasp_connection.ReconnectThread()
+		self.threadR = wasp_connection.ReconnectThread(self)
 		self.threadN = notifications.MainThread(self)
 
 		self.threadW.start()
@@ -109,12 +151,41 @@ class Companion(Gtk.Application):
 		self.objects = builder.get_objects()
 		self.window = self.o("window")
 		self.window.set_application(self)
+		self.device_selector_window = self.o("device_selector_window")
+		self.device_selector_window.set_transient_for(self.window)
 
 		if not self.in_startup:
 			# skip in startup because sync_activity and sync_desc_str are not available yet
 			self.set_syncing(self.sync_activity, self.sync_desc_str)
 
 		self.window.show_all()
+
+	def select_device(self):
+		self.device_selector_window.show_all()
+
+		self.threadS = wasp_connection.ScanThread(self)
+		self.threadS.start()
+
+	def on_device_scanned(self, name, address, type="nus", version="0"):
+		if address == self.config["last_device"]:
+			self.connect(None, address)
+			return
+		devrow = Handy.ActionRow()
+		devrow.set_title(name)
+		devrow.set_activatable_widget(devrow)
+		devrow.set_activatable_widget(None)
+		if type=="nus":
+			devrow.set_subtitle("Wasp-OS")
+			devrow.connect("activated", self.connect, address)
+		elif type=="infinitime":
+			devrow.set_subtitle("InfiniTime")
+			devrow.connect("activated", print, "There currently is no way to connect to InfiniTime devices")
+		elif type=="dfu":
+			devrow.set_subtitle("Wasp-OS (Bootloader)")
+			devrow.connect("activated", print, "There currently is no way to connect to the Wasp-OS Bootloader")
+
+		self.o("device_selector_device_list").insert(devrow, 0)
+		devrow.show()
 
 	def o(self, name):
 		for i in range(0, len(self.objects)):
