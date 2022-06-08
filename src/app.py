@@ -100,7 +100,7 @@ class Companion(Gtk.Application):
 
 		self.threadW = wasp_connection.MainThread(self, device_mac=device_mac)
 		self.threadP = media_player.MainThread(self)
-		self.threadR = wasp_connection.ReconnectThread()
+		self.threadR = wasp_connection.ReconnectThread(self)
 		self.threadN = notifications.MainThread(self)
 
 		self.threadW.start()
