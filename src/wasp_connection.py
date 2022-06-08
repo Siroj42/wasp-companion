@@ -3,6 +3,7 @@ import time
 import json
 import asyncio
 from bleak import BleakClient, BleakScanner
+from bleak.exc import BleakError
 import re
 
 UART_TX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e" #Nordic NUS characteristic for TX
@@ -81,9 +82,11 @@ class MainThread(threading.Thread):
 				if self.command_event.is_set():
 					self.command_event.clear()
 					for char in self.cmd:
-						await self.client.write_gatt_char(UART_TX_UUID, bytearray(bytes(char, 'utf-8')))
+						try:
+							await self.client.write_gatt_char(UART_TX_UUID, bytearray(bytes(char, 'utf-8')))
+						except BleakError:
+							app.threadR.reconnect(countdown=5)
 				elif self.kill_event.is_set():
-					print("threadW is being killed!")
 					await self.client.disconnect()
 					break
 
@@ -112,16 +115,21 @@ class ReconnectThread(threading.Thread):
 			self.reconnect_event.wait(timeout=1)
 			if self.reconnect_event.is_set():
 				last_command = app.threadW.last_command
+				expecting_return = app.threadW.expecting_return
 				self.app.set_syncing(False, "Lost connection!")
 				self.app.threadW.kill_event.set()
 				for i in range(self.countdown):
-					self.app.set_syncing(False, "Retrying in " + str(10-i) + " seconds")
+					self.app.set_syncing(False, "Retrying in " + str(self.countdown-i) + " seconds")
 					time.sleep(1)
+				self.app.set_syncing(True, "Reconnecting...")
 				self.app.threadW = MainThread(app, no_rtc=True, last_command=last_command, device_mac="E9:83:D7:36:3D:0E") #TODO: Need to get device_mac from database or sth.
+				self.app.threadW.expecting_return = expecting_return
 				self.app.threadW.start()
+				self.app.threadW.waspconn_ready_event.wait()
+				self.app.set_syncing(False, "Done!")
 				self.reconnect_event.clear()
 
-	def reconnect(self, countdown=0):
+	def reconnect(self, countdown=1):
 		self.countdown = countdown
 		self.reconnect_event.set()
 
