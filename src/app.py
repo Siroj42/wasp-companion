@@ -6,6 +6,8 @@ import threading
 import pexpect
 import wasp_connection
 import media_player
+import json
+from pathlib import Path
 import notifications
 
 # UI library
@@ -57,6 +59,9 @@ class Companion(Gtk.Application):
 		self.window = None
 
 	def quit(self):
+		config_path = Path(GLib.get_user_config_dir() + "/wasp-companion.json")
+		with open(config_path, "w") as f:
+			json.dump(self.config, f)
 		try:
 			self.threadW.kill_event.set()
 		except:
@@ -92,11 +97,22 @@ class Companion(Gtk.Application):
 		self.in_startup = True
 		# declare that the application is currently starting up. Certain variables are not available yet.
 
+		config_path = Path(GLib.get_user_config_dir() + "/wasp-companion.json")
+		if config_path.is_file():
+			with open(config_path, "r") as f:
+				self.config = json.load(f)
+		else:
+			self.config = {"version": 1, "last_device": ""}
+			with open(config_path, "w+") as f:
+				json.dump(self.config, f)
+
 		self.create_window()
 		self.select_device()
 
 	def connect(self, action_row, device_mac):
 		self.device_selector_window.close()
+
+		self.config["last_device"] = device_mac
 
 		self.threadW = wasp_connection.MainThread(self, device_mac=device_mac)
 		self.threadP = media_player.MainThread(self)
@@ -151,6 +167,9 @@ class Companion(Gtk.Application):
 		self.threadS.start()
 
 	def on_device_scanned(self, name, address, type="nus", version="0"):
+		if address == self.config["last_device"]:
+			self.connect(None, address)
+			return
 		devrow = Handy.ActionRow()
 		devrow.set_title(name)
 		devrow.set_activatable_widget(devrow)
