@@ -62,6 +62,10 @@ class Companion(Gtk.Application):
 		except:
 			print("threadW is not running yet")
 		try:
+			self.threadR.kill_event.set()
+		except:
+			print("threadR is not running yet")
+		try:
 			self.threadP.quit()
 		except:
 			print("threadP is not running yet")
@@ -70,6 +74,12 @@ class Companion(Gtk.Application):
 		except:
 			print("threadN is not running yet")
 		try:
+			print("Trying to join threadR...")
+			self.threadR.join()
+		except:
+			print("threadR is not running yet")
+		try:
+			print("Trying to join threadW...")
 			self.threadW.join()
 		except:
 			print("threadW is not running yet")

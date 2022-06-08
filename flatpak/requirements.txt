@@ -1,2 +1,3 @@
 pexpect
 dbus-python
+dbus-next>=0.2.2
