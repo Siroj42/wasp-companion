@@ -1,7 +1,7 @@
 app-id: com.arteeh.Companion
 # Libhandy apparently depends on vala, so the freedesktop platform is not enough
 runtime: org.gnome.Platform
-runtime-version: '40'
+runtime-version: '42'
 sdk: org.gnome.Sdk
 command: /app/bin/run.sh
 
@@ -22,9 +22,6 @@ modules:
     config-opts:
       - "-Dexamples=false"
       - "-Dtests=false"
-    sources:
-      - type: git
-        url: https://gitlab.gnome.org/GNOME/libhandy.git
   - name: Playerctl
     buildsystem: meson
     builddir: true
