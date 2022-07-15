@@ -2,23 +2,29 @@
 
 This is a Linux companion app for [wasp-os](https://github.com/daniel-thompson/wasp-os), a smartwatch operating system. It's written in Python with GTK and Libhandy.
 
-This software is early in development so things are guaranteed to break.
+This software is early in development so things are guaranteed to break. 
 
 ### Functionality
 
+Already implemented features are marked with ✅️.
+
 On the front end, this app will:
 
-- Show a graph of heartbeat data
-- Show a graph of step counter data
+- Show a graph of heartbeat/step counter data (this might also be done through an API for separate apps, for example [Health](https://gitlab.gnome.org/World/Health))
 - Add, update or remove apps
 - Update wasp-os (DFU)
 - Present settings (brightness, bluetooth, notifications, set a watchface, go to the bootloader, turn on the flashlight, restart the watch)
 
 Behind the scenes, it will:
 
-- Synchronize the time on the watch (RTC)
-- Control music that's playing on your phone
+- Synchronize the time on the watch (RTC) ✅️
+- Control music that's playing on your phone ✅️
+- Send notifications from your phone to wasp-os ✅️
 - Sync the timer and stopwatch with the Clock app on your phone
+
+### Installing
+
+You can use pre-built flatpaks from [Github Actions](https://github.com/Siroj42/wasp-companion/actions/workflows/flatpak.yml) to try Wasp Companion on your device. Builds are available for both x86_64 and aarch64 architectures.
 
 ### Building
 
@@ -36,3 +42,4 @@ To rebuild modules (`./flatpak -m`), you need `pip3` installed locally.
 ### Useful links
 
 - [Python GTK reference](https://lazka.github.io/pgi-docs/)
+- [Libhandy Docs](https://gnome.pages.gitlab.gnome.org/libhandy/doc/1-latest/)
