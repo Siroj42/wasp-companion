@@ -30,7 +30,9 @@ class MainThread(threading.Thread):
 			[
 				"type='method_return'",
 				"type='method_call', interface='org.freedesktop.Notifications', member='Notify'",
-				"type='signal', interface='org.freedesktop.Notifications', member='NotificationClosed'"],
+				"type='method_call', interface='org.gtk.Notifications', member='AddNotification'",
+				"type='signal', interface='org.freedesktop.Notifications', member='NotificationClosed'"
+			],
 			0,
 			dbus_interface='org.freedesktop.DBus.Monitoring'
 		)
@@ -45,13 +47,29 @@ class MainThread(threading.Thread):
 	def on_message(self, bus, message):
 		args = message.get_args_list()
 		if isinstance(message, dbus.lowlevel.MethodCallMessage):
-			src = args[0]
-			title = args[3]
-			body = args[4]
-			for n in self.notifs:
-				if self.notifs[n] == {"src": src, "title": title, "body": body}:
-					return
-			self.notifs[str(message.get_serial())] = {"src": src, "title": title, "body": body}
+			message_path = str(message.get_path())
+
+			if message_path != "/org/freedesktop/Notifications":
+				src = args[0]
+				notif_id = args[1]
+				title = args[2]["title"]
+				body = args[2]["body"]
+				cmd = pc_notif_commands["notify"].format(
+					notif_id=notif_id,
+					src=src,
+					title=title,
+					body=body
+				)
+				app.threadW.waspconn_ready_event.wait()
+				app.threadW.run_command(cmd)
+			else:
+				src = args[0]
+				title = args[3]
+				body = args[4]
+				for n in self.notifs:
+					if self.notifs[n] == {"src": src, "title": title, "body": body}:
+						return
+				self.notifs[str(message.get_serial())] = {"src": src, "title": title, "body": body}
 		elif isinstance(message, dbus.lowlevel.MethodReturnMessage):
 			reply_serial = str(message.get_reply_serial())
 			if reply_serial in self.notifs:
