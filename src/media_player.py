@@ -18,10 +18,8 @@ class MainThread(threading.Thread):
 		thread = self
 		threading.Thread.__init__(self)
 		app = app_object
-		self.waspconn_ready_event = threading.Event()
 
 	def run(self):
-		self.waspconn_ready_event.wait()
 		self.manager = Playerctl.PlayerManager()
 		self.manager.connect('name-appeared', on_player_appeared)
 		self.manager.connect('player-vanished', on_player_vanished)
@@ -62,14 +60,17 @@ def on_player_vanished(manager, player):
 	return
 
 def on_play(player, status, manager):
+	app.threadW.waspconn_ready_event.wait()
 	app.threadW.run_command(pc_music_commands["play"])
 
 def on_pause(player, status, manager):
+	app.threadW.waspconn_ready_event.wait()
 	app.threadW.run_command(pc_music_commands["pause"])
 
 def on_metadata_change(player, metadata, manager):
 	artist = thread.current_player.get_artist()
 	track = thread.current_player.get_title()
+	app.threadW.waspconn_ready_event.wait()
 	if artist and track:
 		app.threadW.run_command(pc_music_commands["info"].format(artist=artist.replace('"','\\"'), track=track.replace('"','\\"')))
 	else:

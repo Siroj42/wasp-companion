@@ -22,10 +22,8 @@ class MainThread(threading.Thread):
 		self.serials = []
 		self.notifs = {}
 		threading.Thread.__init__(self)
-		self.waspconn_ready_event = threading.Event()
 
 	def run(self):
-		self.waspconn_ready_event.wait()
 		self.notif_dbus = self.session_bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications')
 		self.fd_dbus = self.session_bus.get_object('org.freedesktop.DBus', '/org/freedesktop/DBus')
 		self.fd_dbus.BecomeMonitor(
@@ -37,8 +35,6 @@ class MainThread(threading.Thread):
 			dbus_interface='org.freedesktop.DBus.Monitoring'
 		)
 		self.session_bus.add_message_filter(self.on_message)
-
-		print("entering loop...")
 
 		self.main = GLib.MainLoop()
 		self.main.run()
@@ -69,9 +65,11 @@ class MainThread(threading.Thread):
 					title=title,
 					body=body
 				)
+				app.threadW.waspconn_ready_event.wait()
 				app.threadW.run_command(cmd)
 				del self.notifs[reply_serial]
 		else:
 			notif_id = args[0]
 			cmd = pc_notif_commands["unnotify"].format(notif_id=notif_id)
+			app.threadW.waspconn_ready_event.wait()
 			app.threadW.run_command(cmd)

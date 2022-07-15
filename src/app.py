@@ -48,7 +48,7 @@ class Handler:
 		return True
 
 	def _btnReconnect(self, *args):
-		app.threadR.reconnect()
+		app.threadW.reconnect()
 		return True
 
 class Companion(Gtk.Application):
@@ -67,10 +67,6 @@ class Companion(Gtk.Application):
 		except:
 			print("threadW is not running yet")
 		try:
-			self.threadR.kill_event.set()
-		except:
-			print("threadR is not running yet")
-		try:
 			self.threadP.quit()
 		except:
 			print("threadP is not running yet")
@@ -79,12 +75,6 @@ class Companion(Gtk.Application):
 		except:
 			print("threadN is not running yet")
 		try:
-			print("Trying to join threadR...")
-			self.threadR.join()
-		except:
-			print("threadR is not running yet")
-		try:
-			print("Trying to join threadW...")
 			self.threadW.join()
 		except:
 			print("threadW is not running yet")
@@ -116,13 +106,14 @@ class Companion(Gtk.Application):
 
 		self.threadW = wasp_connection.MainThread(self, device_mac=device_mac)
 		self.threadP = media_player.MainThread(self)
-		self.threadR = wasp_connection.ReconnectThread(self)
 		self.threadN = notifications.MainThread(self)
 
 		self.threadW.start()
 		self.threadP.start()
-		self.threadR.start()
 		self.threadN.start()
+
+		self.threadW.waspconn_ready_event.wait()
+		self.threadW.rtc()
 
 		self.in_startup = False
 
@@ -199,7 +190,6 @@ def o(name):
 		if app.objects[i].get_name() == name:
 			return app.objects[i]
 	return -1
-
 
 if __name__ == "__main__":
 	global app
