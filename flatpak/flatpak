@@ -58,12 +58,17 @@ _help () {
 	echo "-r --requirements    Install the build requirements"
 	echo "-p --play            Run the built app"
 	echo "-f --full            Do everything except running the app"
+	echo "-qp --quickplay      Build and run the app"
 }
 
 _main () {
 	if [ "$1" == "-q" ] || [ "$1" == "--quick" ]
 	then
 		_quick
+	elif [ "$1" == "-qp" ] || [ "$1" == "--quickplay" ]
+	then
+		_quick
+		_play
 	elif [ "$1" == "-c" ] || [ "$1" == "--clear" ]
 	then
 		_clear
