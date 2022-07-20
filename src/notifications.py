@@ -1,11 +1,11 @@
-from dbus.mainloop.glib import DBusGMainLoop
 import gi
-import dbus
+
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio, GLib
+
 import threading
 
-from gi.repository import GLib
-
-DBusGMainLoop(set_as_default=True)
+session_bus_address = Gio.dbus_address_get_for_bus_sync(Gio.BusType.SESSION)
 
 pc_notif_commands = {
 	"notify": 'GB({{"t":"notify","id":"{notif_id}","src":"{src}","title":"{title}","body":"{body}"}})',
@@ -14,66 +14,78 @@ pc_notif_commands = {
 
 class MainThread(threading.Thread):
 	def __init__(self, app_object):
-		global app
-		global thread
-		thread = self
-		app = app_object
-		self.session_bus = dbus.SessionBus()
-		self.serials = []
+		super().__init__()
+		self.app = app_object
 		self.notifs = {}
-		threading.Thread.__init__(self)
 
 	def run(self):
-		self.notif_dbus = self.session_bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications')
-		self.fd_dbus = self.session_bus.get_object('org.freedesktop.DBus', '/org/freedesktop/DBus')
-		self.fd_dbus.BecomeMonitor(
-			[
-				"type='method_return'",
-				"type='method_call', interface='org.freedesktop.Notifications', member='Notify'",
-				"type='method_call', interface='org.gtk.Notifications', member='AddNotification'",
-				"type='signal', interface='org.freedesktop.Notifications', member='NotificationClosed'"
-			],
-			0,
-			dbus_interface='org.freedesktop.DBus.Monitoring'
+		conn = Gio.DBusConnection.new_for_address_sync(
+			session_bus_address,
+			Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION
 		)
-		self.session_bus.add_message_filter(self.on_message)
 
-		self.main = GLib.MainLoop()
-		self.main.run()
+		conn.call_sync(
+			"org.freedesktop.DBus",
+			"/org/freedesktop/DBus",
+			"org.freedesktop.DBus.Monitoring",
+			"BecomeMonitor",
+			GLib.Variant(
+				"(asu)",
+				[
+					[
+						"type='method_return'",
+						"type='method_call', interface='org.freedesktop.Notifications', member='Notify'",
+						"type='method_call', interface='org.gtk.Notifications', member='AddNotification'",
+						"type='signal', interface='org.freedesktop.Notifications', member='NotificationClosed'"
+					],
+					0
+				]
+			),
+			None,
+			Gio.DBusCallFlags.NONE,
+			-1,
+			None
+		)
+		conn.add_filter(self.msg_filter)
+
+		self.loop = GLib.MainLoop()
+		self.loop.run()
 
 	def quit(self):
-		self.main.quit()
+		self.loop.quit()
 
-	def on_message(self, bus, message):
-		args = message.get_args_list()
-		if isinstance(message, dbus.lowlevel.MethodCallMessage):
-			message_path = str(message.get_path())
+	def msg_filter(self, conn, message, incoming):
+		msg_type = message.get_message_type()
+		msg_body = message.get_body()
 
-			if message_path != "/org/freedesktop/Notifications":
-				src = args[0]
-				notif_id = args[1]
-				title = args[2]["title"]
-				body = args[2]["body"]
+		if msg_type == Gio.DBusMessageType.METHOD_CALL:
+			if message.get_path() == "/org/freedesktop/Notifications":
+				src = msg_body[0]
+				title = msg_body[3]
+				body = msg_body[4]
+				for n in self.notifs:
+					if self.notifs[n] == {"src": src, "title": title, "body": body}:
+						return
+				self.notifs[str(message.get_serial())] = {"src": src, "title": title, "body": body}
+			else:
+				print("Got a GTK Notification")
+				print(msg_body)
+				src = msg_body[0]
+				notif_id = msg_body[1]
+				title = msg_body[2]["title"]
+				body = msg_body[2]["body"]
 				cmd = pc_notif_commands["notify"].format(
 					notif_id=notif_id,
 					src=src,
 					title=title,
 					body=body
 				)
-				app.threadW.waspconn_ready_event.wait()
-				app.threadW.run_command(cmd)
-			else:
-				src = args[0]
-				title = args[3]
-				body = args[4]
-				for n in self.notifs:
-					if self.notifs[n] == {"src": src, "title": title, "body": body}:
-						return
-				self.notifs[str(message.get_serial())] = {"src": src, "title": title, "body": body}
-		elif isinstance(message, dbus.lowlevel.MethodReturnMessage):
+				self.app.threadW.waspconn_ready_event.wait()
+				self.app.threadW.run_command(cmd)
+		elif msg_type == Gio.DBusMessageType.METHOD_RETURN:
 			reply_serial = str(message.get_reply_serial())
 			if reply_serial in self.notifs:
-				notif_id = args[0]
+				notif_id = msg_body[0]
 				src = self.notifs[reply_serial]["src"]
 				title = self.notifs[reply_serial]["title"]
 				body = self.notifs[reply_serial]["body"]
@@ -83,11 +95,11 @@ class MainThread(threading.Thread):
 					title=title,
 					body=body
 				)
-				app.threadW.waspconn_ready_event.wait()
-				app.threadW.run_command(cmd)
+				self.app.threadW.waspconn_ready_event.wait()
+				self.app.threadW.run_command(cmd)
 				del self.notifs[reply_serial]
-		else:
-			notif_id = args[0]
+		elif msg_type == Gio.DBusMessageType.SIGNAL:
+			notif_id = msg_body[0]
 			cmd = pc_notif_commands["unnotify"].format(notif_id=notif_id)
-			app.threadW.waspconn_ready_event.wait()
-			app.threadW.run_command(cmd)
+			self.app.threadW.waspconn_ready_event.wait()
+			self.app.threadW.run_command(cmd)
