@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.arteeh.Companion</id>
+  <id>io.github.siroj42.WaspCompanion</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>The Unlicense</project_license>
   <developer_name>Maarten de Jong</developer_name>
@@ -11,7 +11,7 @@
       Wasp Companion is a companion app for the wasp-os smartwatch operating system.
     </p>
   </description>
-  <launchable type="desktop-id">com.arteeh.Companion.desktop</launchable>
+  <launchable type="desktop-id">io.github.siroj42.WaspCompanion.desktop</launchable>
   <screenshots>
     <screenshot type="default">
       <image>http://comical.sourceforge.net/images/comical-0.5-linux.jpg</image>

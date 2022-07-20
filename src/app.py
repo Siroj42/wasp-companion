@@ -54,7 +54,7 @@ class Handler:
 class Companion(Gtk.Application):
 	def __init__(self):
 		Gtk.Application.__init__(self,
-			application_id="com.arteeh.Companion",
+			application_id="io.github.siroj42.WaspCompanion",
 			flags=Gio.ApplicationFlags.FLAGS_NONE)
 		self.window = None
 

@@ -4,5 +4,5 @@ Keywords=wasp;companion;watch;smartwatch;pinetime;pine;pine64
 Exec=/app/bin/run.sh
 Terminal=false
 Type=Application
-Icon=com.arteeh.Companion
+Icon=io.github.siroj42.WaspCompanion
 StartupNotify=true
