@@ -3,7 +3,7 @@
 _quick () {
 	# Install
 	flatpak run org.flatpak.Builder \
-		.builddir com.arteeh.Companion.yml \
+		.builddir io.github.siroj42.WaspCompanion.yml \
 		--force-clean --user --install
 }
 
@@ -12,7 +12,7 @@ _clear () {
 	rm -rf .builddir .flatpak-builder
 
 	# Remove the current flatpak if it exists
-	flatpak remove --delete-data -y com.arteeh.Companion
+	flatpak remove --delete-data -y io.github.siroj42.WaspCompanion
 }
 
 _modules () {
@@ -39,7 +39,7 @@ _requirements () {
 
 _play () {
 	# Run
-	flatpak run com.arteeh.Companion
+	flatpak run io.github.siroj42.WaspCompanion
 }
 
 _full () {

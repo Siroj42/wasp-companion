@@ -30,6 +30,6 @@ jobs:
     - uses: bilelmoussaoui/flatpak-github-actions/flatpak-builder@v4
       with:
         bundle: wasp-companion.flatpak
-        manifest-path: flatpak/com.arteeh.Companion.yml
+        manifest-path: flatpak/io.github.siroj42.WaspCompanion.yml
         cache-key: flatpak-builder-${{ github.sha }}
         arch: ${{ matrix.arch }}
