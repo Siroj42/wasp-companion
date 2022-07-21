@@ -41,16 +41,20 @@ class MainThread(threading.Thread):
 
 	def notification_handler(self, sender, data):
 		if not (self.last_data == bytes(data).decode('utf-8') and self.last_data == "\n"):
+			if bytes(data).decode('utf-8').startswith(">>>") and self.expecting_return > 0:
+				self.expecting_return = 0
+				self.return_queue.sync_q.put(self.return_value)
 			if bytes(data).decode('utf-8') == "\r" or bytes(data).decode('utf-8') == "\r\n":
 				result = re.match('\n{"t":"\w+", "n":"\w+"} +', self.line)
 				if result:
 					result_dict = json.loads(self.line)
 					if result_dict["t"] == "music":
 						self.app.threadP.process_watchcmd(result_dict["n"])
-				if self.expecting_return == 1:
-					self.return_queue.sync_q.put(self.line)
-				if self.expecting_return > 0:
-					self.expecting_return -= 1
+				if self.expecting_return == 2:
+					self.return_value = []
+					self.expecting_return = 1
+				elif self.expecting_return == 1:
+					self.return_value.append(self.line)
 				self.line = ""
 			else:
 				self.line = self.line + bytes(data).decode('utf-8')
@@ -93,7 +97,7 @@ class MainThread(threading.Thread):
 
 	def rtc(self):
 		self.app.set_syncing(True)
-		result = self.run_command('print(watch.rtc.get_localtime())', expect_return=True)
+		result = self.run_command('print(watch.rtc.get_localtime())', expect_return=True)[0]
 		time_check = re.match('\(([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+)\)', result)
 		t = time.localtime()
 
