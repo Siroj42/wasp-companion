@@ -37,6 +37,20 @@
             ]
         },
         {
+            "name": "python3-dasbus",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} dasbus"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/a1/3f/f557ce73ce3600d4b5c82aa5444bc081c6c4eb8c9fd2de65b9c2f0c4424b/dasbus-1.6-py3-none-any.whl",
+                    "sha256": "092878cab50142614656b405d2c1f5488a5070c01c2368d113b3840ddc0b6f6e"
+                }
+            ]
+        },
+        {
             "name": "python3-janus",
             "buildsystem": "simple",
             "build-commands": [

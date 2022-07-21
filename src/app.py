@@ -6,6 +6,7 @@ import threading
 import pexpect
 import wasp_connection
 import media_player
+import dbus_api
 import json
 from pathlib import Path
 import notifications
@@ -75,6 +76,10 @@ class Companion(Gtk.Application):
 		except:
 			print("threadN is not running yet")
 		try:
+			self.threadD.quit()
+		except:
+			print("threadD is not running yet")
+		try:
 			self.threadW.join()
 		except:
 			print("threadW is not running yet")
@@ -107,10 +112,12 @@ class Companion(Gtk.Application):
 		self.threadW = wasp_connection.MainThread(self, device_mac=device_mac)
 		self.threadP = media_player.MainThread(self)
 		self.threadN = notifications.MainThread(self)
+		self.threadD = dbus_api.MainThread(self)
 
 		self.threadW.start()
 		self.threadP.start()
 		self.threadN.start()
+		self.threadD.start()
 
 		self.threadW.waspconn_ready_event.wait()
 		self.threadW.rtc()

@@ -38,6 +38,7 @@ modules:
       - cp -r bleak/bleak /app/bin/bleak
       - install -D wasp_connection.py /app/bin/wasp_connection.py
       - install -D media_player.py /app/bin/media_player.py
+      - install -D dbus_api.py /app/bin/dbus_api.py
       - install -D app.ui /app/bin/app.ui
       - install -D run.sh /app/bin/run.sh
       - install -D wasptool /app/bin/wasptool
