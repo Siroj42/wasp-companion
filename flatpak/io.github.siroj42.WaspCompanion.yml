@@ -36,6 +36,7 @@ modules:
     build-commands:
       - install -D app.py /app/bin/app.py
       - cp -r bleak/bleak /app/bin/bleak
+      - cp -r dbus /app/share/dbus
       - install -D wasp_connection.py /app/bin/wasp_connection.py
       - install -D media_player.py /app/bin/media_player.py
       - install -D dbus_api.py /app/bin/dbus_api.py

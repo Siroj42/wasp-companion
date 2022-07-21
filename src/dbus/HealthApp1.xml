@@ -1,0 +1,28 @@
+<node xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
+  !--
+    io.github.siroj42.HealthApp:
+    @short-description: Allows companion apps to announce their existence to health apps
+  -->
+  <interface name="io.github.siroj42.HealthApp1">
+    <!--
+      Announce
+      @bus_name: The bus name under which the companion app exposes the io.github.siroj42.HealthAPI1 interface. Uniquely identifies the companion app.
+      @app_name: The name of the companion application, displayed to the user in the health app's settings.
+
+      Announces a companion app's location on the DBus.
+    -->
+    <method name="Announce">
+      <arg direction="in" name="bus_name" type="s" />
+      <arg direction="in" name="app_name" type="s" />
+    </method>
+    <!--
+      UnAnnounce
+      @bus_name: The bus name that the companion app announced itself under.
+
+      Notifies the health app that a companion app is no longer available.
+    -->
+    <method name="UnAnnounce">
+      <arg direction="in" name="bus_name" type="s" />
+    </method>
+  </interface>
+</node>

@@ -5,17 +5,9 @@ from dasbus.connection import SessionMessageBus
 import threading
 import time
 
-class HealthAPI():
-	__dbus_xml__ = """
-		<node>
-			<interface name="io.github.siroj42.WaspCompanion.HealthAPI1">
-				<method name="GetActivities">
-					<arg direction="in" name="since" type="u" />
-					<arg direction="out" name="activity" type="a(siiiiiiii)" />
-				</method>
-			</interface>
-		</node>
-	"""
+class HealthAPI1():
+	with open("/app/share/dbus/HealthAPI1.xml") as file:
+		__dbus_xml__ = file.read()
 
 	def __init__(self, app_object):
 	    self.app = app_object
@@ -66,14 +58,39 @@ class MainThread(threading.Thread):
 	def __init__(self, app_object):
 		super().__init__()
 		self.app = app_object
+		self.proxy_v1 = None
 
 	def run(self):
-		bus = SessionMessageBus()
-		health_api = HealthAPI(self.app)
-		bus.publish_object("/io/github/siroj42/WaspCompanion/HealthAPI1", health_api)
+		self.bus = SessionMessageBus()
+		health_api1 = HealthAPI1(self.app)
+		self.bus.publish_object("/io/github/siroj42/HealthAPI1", health_api1)
+
+		dbus_proxy = self.bus.get_proxy(
+			"org.freedesktop.DBus",
+			"/org/freedesktop/DBus"
+		)
+		dbus_proxy.NameOwnerChanged.connect(self.on_name_owner_changed)
 
 		self.loop = EventLoop()
 		self.loop.run()
 
+	def on_name_owner_changed(self, name, old_owner, new_owner):
+		if name == "io.github.siroj42.HealthApp":
+			self.proxy_v1 = self.bus.get_proxy(
+				"io.github.siroj42.HealthApp",
+				"/io/github/siroj42/HealthApp1",
+				"io.github.siroj42.HealthApp1"
+			)
+			try:
+				self.proxy_v1.Announce(
+					"io.github.siroj42.WaspCompanion",
+					"Wasp Companion"
+				)
+			except:
+				del self.proxy_v1
+
+
 	def quit(self):
+		if self.proxy_v1:
+			self.proxy_v1.UnAnnounce("io.github.siroj42.WaspCompanion")
 		self.loop.quit()
