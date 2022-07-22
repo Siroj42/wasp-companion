@@ -5,8 +5,8 @@ from dasbus.connection import SessionMessageBus
 import threading
 import time
 
-class HealthAPI1():
-	with open("/app/share/dbus/HealthAPI1.xml") as file:
+class Health1():
+	with open("/app/share/dbus/Health1.xml") as file:
 		__dbus_xml__ = file.read()
 
 	def __init__(self, app_object):
@@ -61,8 +61,8 @@ class MainThread(threading.Thread):
 
 	def run(self):
 		self.bus = SessionMessageBus()
-		health_api1 = HealthAPI1(self.app)
-		self.bus.publish_object("/io/github/siroj42/HealthAPI1", health_api1)
+		health1 = Health1(self.app)
+		self.bus.publish_object("/io/github/siroj42/Health1", health1)
 
 		dbus_proxy = self.bus.get_proxy(
 			"org.freedesktop.DBus",

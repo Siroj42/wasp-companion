@@ -1,6 +1,6 @@
 # Health API
 
-Wasp Companion gives other applications to access wasp-os' step counter (and maybe other things in the future) through a DBus Interface. This data is represented as a list of activities. It makes it available at the bus name `io.github.siroj42.WaspCompanion`, but other applications could also expose the same interface on their own bus names. The paths and interfaces are named according to the API version, so API version 1 is exposed through the interface `io.github.siroj42.HealthAPI1` on the path `/io/github/siroj42/HealthAPI1`. All interfaces are documented in the DBus XML files in the `src/dbus/` directory, and an example implementation of the health app part of the API is available in `docs/healthapp-example.py`.
+Wasp Companion gives other applications to access wasp-os' step counter (and maybe other things in the future) through a DBus Interface. This data is represented as a list of activities. It makes it available at the bus name `io.github.siroj42.WaspCompanion`, but other applications could also expose the same interface on their own bus names. The paths and interfaces are named according to the API version, so API version 1 is exposed through the interface `io.github.siroj42.Health1` on the path `/io/github/siroj42/Health1`. All interfaces are documented in the DBus XML files in the `src/dbus/` directory, and an example implementation of the health app part of the API is available in `docs/healthapp-example.py`.
 
 ## Detection
 

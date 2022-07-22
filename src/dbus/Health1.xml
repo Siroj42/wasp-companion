@@ -1,11 +1,11 @@
 <node xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
   <!--
-    io.github.siroj42.HealthAPI1:
+    io.github.siroj42.Health1:
     @short-description: Provides health data to other apps
 
-    First version of HealthAPI, a DBus interface that allows apps to provide health/activity data to other apps.
+    First version of Health, a DBus interface that allows apps to provide health/activity data to other apps.
   -->
-  <interface name="io.github.siroj42.HealthAPI1">
+  <interface name="io.github.siroj42.Health1">
     <!--
       GetActivities
       @since: The time and date since when the data should be retrieved, as a standard unix timestamp
@@ -13,7 +13,7 @@
         - (string) activity type, for example "walking", "cycling"...
         - (signed integer) calories burned (set to -1 if no measurement is available)
         - (unsigned integer) start time of the activity (unix timestamp)
-        - (signed integer) distance traversed (set to -1 if no measurement is available)
+        - (signed integer) distance traversed in meters (set to -1 if no measurement is available)
         - (signed integer) average heart rate (set to -1 if no measurement is available)
         - (signed integer) maximum heart rate (set to -1 if no measurement is available)
         - (signed integer) minimum heart rate (set to -1 if no measurement is available)

@@ -44,9 +44,9 @@ if __name__ == "__main__":
 		exit()
 
 	companion_app = bus.get_proxy(
-		selected_app,						# bus name
-		"/io/github/siroj42/HealthAPI1",	# path
-		"io.github.siroj42.HealthAPI1"		# interface
+		selected_app,					# bus name
+		"/io/github/siroj42/Health1",	# path
+		"io.github.siroj42.Health1"		# interface
 	)
 	# Get all activities from the last hour
 	activities = companion_app.GetActivities(time.time() - 3600)

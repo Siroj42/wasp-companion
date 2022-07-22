@@ -5,8 +5,8 @@ import threading
 
 proxy_v1 = None
 
-class HealthAPI1():
-	with open("../src/dbus/HealthAPI1.xml") as file:
+class Health1():
+	with open("../src/dbus/Health1.xml") as file:
 		__dbus_xml__ = file.read()
 
 	def GetActivities(self, since):
@@ -37,8 +37,8 @@ def on_name_owner_changed(name, old_owner, new_owner):
 
 if __name__ == "__main__":
 	bus = SessionMessageBus()
-	health_api1 = HealthAPI1()
-	bus.publish_object("/io/github/siroj42/HealthAPI1", health_api1)
+	health_api1 = Health1()
+	bus.publish_object("/io/github/siroj42/Health1", health_api1)
 	bus.register_service("org.example.CompanionApp")
 
 	dbus_proxy = bus.get_proxy(
