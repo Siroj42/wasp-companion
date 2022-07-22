@@ -12,8 +12,7 @@ class HealthAPI1():
 	def __init__(self, app_object):
 	    self.app = app_object
 
-	@accepts_additional_arguments
-	def GetActivities(self, since, call_info):
+	def GetActivities(self, since):
 		day_since_values = [since]
 		while day_since_values[len(day_since_values)-1]+24*60*60 <= time.time():
 			day_since_values.append(day_since_values[len(day_since_values)-1] + 24*60*60)
@@ -87,7 +86,7 @@ class MainThread(threading.Thread):
 					"Wasp Companion"
 				)
 			except:
-				del self.proxy_v1
+				self.proxy_v1 = None
 
 
 	def quit(self):

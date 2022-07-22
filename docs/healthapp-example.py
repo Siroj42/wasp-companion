@@ -1,4 +1,3 @@
-from dasbus.server.interface import accepts_additional_arguments
 from dasbus.loop import EventLoop
 from dasbus.connection import SessionMessageBus
 
@@ -58,3 +57,4 @@ if __name__ == "__main__":
 			activity[0],
 			activity[7] / 60
 		))
+	loop.quit()
