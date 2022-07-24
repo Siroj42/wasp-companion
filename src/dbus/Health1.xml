@@ -8,23 +8,23 @@
   <interface name="io.github.siroj42.Health1">
     <!--
       GetActivities
-      @since: The time and date since when the data should be retrieved, as a standard unix timestamp
+      @since: The time and date since when the data should be retrieved, as a ISO8601 timestamp
       @activity: A list of activities. Each element describes the activity through the following values:
         - (string) activity type, for example "walking", "cycling"...
-        - (signed integer) calories burned (set to -1 if no measurement is available)
-        - (unsigned integer) start time of the activity (unix timestamp)
+        - (string) start time of the activity (ISO8601 timestamp)
+        - (unsigned integer) duration of the activity (in seconds)
+        - (signed integer) steps taken over the course of the activity (set to -1 if no measurement is available)
         - (signed integer) distance traversed in meters (set to -1 if no measurement is available)
+        - (signed integer) calories burned (set to -1 if no measurement is available)
         - (signed integer) average heart rate (set to -1 if no measurement is available)
         - (signed integer) maximum heart rate (set to -1 if no measurement is available)
         - (signed integer) minimum heart rate (set to -1 if no measurement is available)
-        - (unsigned integer) duration of the activity (in seconds)
-        - (signed integer) steps taken over the course of the activity (set to -1 if no measurement is available)
 
       Returns all activities that occured since the time specified in the "since" argument.
     -->
 	  <method name="GetActivities">
-		  <arg direction="in" name="since" type="u" />
-			<arg direction="out" name="activity" type="a(siuiiiiui)" />
+		  <arg direction="in" name="since" type="s" />
+			<arg direction="out" name="activity" type="a(ssuiiiiii)" />
 		</method>
 	</interface>
 </node>

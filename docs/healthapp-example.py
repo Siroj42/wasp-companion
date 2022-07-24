@@ -3,6 +3,7 @@ from dasbus.connection import SessionMessageBus
 
 import threading
 import time
+import datetime
 
 class HealthApp1():
 	with open("../src/dbus/HealthApp1.xml") as file:
@@ -49,12 +50,12 @@ if __name__ == "__main__":
 		"io.github.siroj42.Health1"		# interface
 	)
 	# Get all activities from the last hour
-	activities = companion_app.GetActivities(time.time() - 3600)
+	activities = companion_app.GetActivities(datetime.datetime.fromtimestamp(int(time.time()-3600)).astimezone().isoformat())
 
 	for activity in activities:
 		print("{} : {} for {} minutes".format(
-			time.asctime(time.localtime(activity[2])),
+			activity[1],
 			activity[0],
-			activity[7] / 60
+			activity[2] / 60
 		))
 	loop.quit()

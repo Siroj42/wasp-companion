@@ -2,3 +2,4 @@ pexpect
 dbus-next>=0.2.2
 dasbus
 janus
+python-dateutil

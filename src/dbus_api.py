@@ -4,6 +4,8 @@ from dasbus.connection import SessionMessageBus
 
 import threading
 import time
+import datetime
+from dateutil import parser
 
 class Health1():
 	with open("/app/share/dbus/Health1.xml") as file:
@@ -13,6 +15,7 @@ class Health1():
 	    self.app = app_object
 
 	def GetActivities(self, since):
+		since = int(parser.parse(since).timestamp())
 		day_since_values = [since]
 		while day_since_values[len(day_since_values)-1]+24*60*60 <= time.time():
 			day_since_values.append(day_since_values[len(day_since_values)-1] + 24*60*60)
@@ -29,7 +32,7 @@ class Health1():
 		activities = []
 		for i in range(len(day_since_values)):
 			day_start_local = time.localtime(day_since_values[i])
-			day_start = day_since_values[i] - day_start_local.tm_hour * 3600 + day_start_local.tm_min * 60 + day_start_local.tm_sec
+			day_start = day_since_values[i] - day_start_local.tm_hour * 3600 - day_start_local.tm_min * 60 - day_start_local.tm_sec
 			day = data[i]
 			activity_steps = 0
 			activity_length = 0
@@ -39,7 +42,8 @@ class Health1():
 				if timestamp < since:
 					continue
 				if day[i] == 0 and activity_steps > 0:
-					activity = ("walking", -1, activity_timestamp, -1, -1, -1, -1, 360*activity_length, activity_steps)
+					start_time = datetime.datetime.fromtimestamp(activity_timestamp).astimezone().isoformat()
+					activity = ("walking", start_time, 360*activity_length, activity_steps, -1, -1, -1, -1, -1)
 					activities.append(activity)
 					activity_steps, activity_length, activity_timestamp = 0, 0, 0
 				elif day[i] > 0:
@@ -48,7 +52,8 @@ class Health1():
 					if activity_timestamp == 0:
 						activity_timestamp = timestamp
 			if activity_steps > 0:
-				activity = ("walking", -1, activity_timestamp, -1, -1, -1, -1, 360*activity_length, activity_steps)
+				start_time = datetime.datetime.fromtimestamp(activity_timestamp).isoformat()
+				activity = ("walking", start_time, 360*activity_length, activity_steps, -1, -1, -1, -1, -1)
 				activities.append(activity)
 
 		return activities
