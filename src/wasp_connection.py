@@ -66,6 +66,8 @@ class MainThread(threading.Thread):
 		self.command_event = Event_ts()
 		self.reconnect_event = Event_ts()
 		self.kill_event = Event_ts()
+		self.command_done_event = Event_ts()
+		self.command_done_event.set()
 		self.loop = asyncio.get_event_loop()
 
 		while True:
@@ -83,11 +85,14 @@ class MainThread(threading.Thread):
 					await asyncio.wait([self.command_event.wait(), self.kill_event.wait(), self.reconnect_event.wait()], return_when=asyncio.FIRST_COMPLETED)
 					if self.command_event.is_set() and not self.reconnect_event.is_set():
 						self.command_event.clear()
+						self.command_done_event.clear()
 						for char in await self.cmd_queue.async_q.get():
 							try:
 								await self.client.write_gatt_char(UART_TX_UUID, bytearray(bytes(char, 'utf-8')))
 							except BleakError:
 								self.reconnect(countdown=5)
+						if self.expecting_return > 0:
+							await self.command_done_event.wait()
 						self.cmd_queue.async_q.task_done()
 					elif self.kill_event.is_set():
 						await self.client.disconnect()
@@ -120,13 +125,16 @@ class MainThread(threading.Thread):
 		self.app.set_syncing(False, desc="Done!")
 
 	def run_command(self, cmd, expect_return=False):
+		self.cmd_queue.sync_q.join()
 		self.cmd_queue.sync_q.put(cmd + "\r")
-		if expect_return:
-			self.expecting_return = 2
+		print("running command {}".format(cmd))
+		self.expecting_return = 2
 		self.command_event.set()
+		r = self.return_queue.sync_q.get()
+		self.return_queue.sync_q.task_done()
+		print("command done!")
+		self.command_done_event.set()
 		if expect_return:
-			r = self.return_queue.sync_q.get()
-			self.return_queue.sync_q.task_done()
 			return r
 
 	def reconnect(self):
