@@ -23,7 +23,7 @@ class Event_ts(asyncio.Event):
 		self._loop.call_soon_threadsafe(super().clear)
 
 class MainThread(threading.Thread):
-	def __init__(self, app_object, no_rtc=False, last_command=None, device_mac=None):
+	def __init__(self, app_object, no_rtc=False, device_mac=None):
 		threading.Thread.__init__(self)
 		self.app = app_object
 		self.no_rtc = no_rtc
@@ -34,7 +34,7 @@ class MainThread(threading.Thread):
 		self.waspconn_ready_event = threading.Event()
 		self.command_return = None
 		self.device_mac = device_mac
-		self.last_command = last_command
+		self.last_command = None
 
 	def run(self):
 		asyncio.run(self.main())
@@ -70,14 +70,26 @@ class MainThread(threading.Thread):
 		self.command_done_event.set()
 		self.loop = asyncio.get_event_loop()
 
+		self.app.set_syncing(True, "Connecting...")
 		while True:
 			async with BleakClient(self.device_mac, loop=self.loop) as client:
 				self.client = client
-				self.app.set_syncing(True, "Connecting...")
 				while not client.is_connected:
 					await asyncio.sleep(0.1)
 				self.app.set_syncing(False, "Done!")
 				await client.start_notify(UART_RX_UUID, self.notification_handler)
+
+				if self.last_command:
+					self.command_done_event.clear()
+					for char in self.last_command:
+						try:
+							await self.client.write_gatt_char(UART_TX_UUID, bytearray(bytes(char, 'utf-8')))
+						except BleakError:
+							self.command_event.set()
+							self.reconnect(countdown=5)
+					self.last_command = None
+					if self.expecting_return > 0:
+						await self.command_done_event.wait()
 
 				self.waspconn_ready_event.set()
 
@@ -86,19 +98,26 @@ class MainThread(threading.Thread):
 					if self.command_event.is_set() and not self.reconnect_event.is_set():
 						self.command_event.clear()
 						self.command_done_event.clear()
-						for char in await self.cmd_queue.async_q.get():
-							try:
+						command = await self.cmd_queue.async_q.get()
+						try:
+							for char in command:
 								await self.client.write_gatt_char(UART_TX_UUID, bytearray(bytes(char, 'utf-8')))
-							except BleakError:
-								self.reconnect(countdown=5)
-						if self.expecting_return > 0:
-							await self.command_done_event.wait()
+							if self.expecting_return > 0:
+								await self.command_done_event.wait()
+						except BleakError:
+							self.last_command = command
+							r = threading.Thread(target=self.reconnect)
+							r.run()
 						self.cmd_queue.async_q.task_done()
 					elif self.kill_event.is_set():
 						await self.client.disconnect()
 						return
-				await self.client.disconnect()
+				for i in range(0, self.reconnect_countdown):
+					self.app.set_syncing(True, "Reconnecting in {} seconds".format(self.reconnect_countdown-i))
+					time.sleep(1)
+				self.app.set_syncing(True, "Reconnecting...")
 				self.reconnect_event.clear()
+				await self.client.disconnect()
 
 	def rtc(self):
 		self.app.set_syncing(True)
@@ -127,17 +146,16 @@ class MainThread(threading.Thread):
 	def run_command(self, cmd, expect_return=False):
 		self.cmd_queue.sync_q.join()
 		self.cmd_queue.sync_q.put(cmd + "\r")
-		print("running command {}".format(cmd))
 		self.expecting_return = 2
 		self.command_event.set()
 		r = self.return_queue.sync_q.get()
 		self.return_queue.sync_q.task_done()
-		print("command done!")
 		self.command_done_event.set()
 		if expect_return:
 			return r
 
-	def reconnect(self):
+	def reconnect(self, countdown=5):
+		self.reconnect_countdown = countdown
 		self.reconnect_event.set()
 
 class ScanThread(threading.Thread):
