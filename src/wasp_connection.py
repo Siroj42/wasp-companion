@@ -6,9 +6,11 @@ import janus
 from bleak import BleakClient, BleakScanner
 from bleak.exc import BleakError
 import re
+import logging
 
-UART_TX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e" #Nordic NUS characteristic for TX
-UART_RX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e" #Nordic NUS characteristic for RX
+import os
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOGLEVEL)
 
 class Event_ts(asyncio.Event):
 	def __init__(self, *args, **kwargs):
@@ -40,6 +42,7 @@ class MainThread(threading.Thread):
 		asyncio.run(self.main())
 
 	def notification_handler(self, sender, data):
+		logging.info("Handling notification...")
 		if not (self.last_data == bytes(data).decode('utf-8') and self.last_data == "\n"):
 			if bytes(data).decode('utf-8').startswith(">>>") and self.expecting_return > 0:
 				self.expecting_return = 0
@@ -55,6 +58,7 @@ class MainThread(threading.Thread):
 					self.expecting_return = 1
 				elif self.expecting_return == 1:
 					self.return_value.append(self.line)
+				logging.info("Received line '{}'".format(self.line))
 				self.line = ""
 			else:
 				self.line = self.line + bytes(data).decode('utf-8')
@@ -73,17 +77,29 @@ class MainThread(threading.Thread):
 		self.app.set_syncing(True, "Connecting...")
 		while True:
 			async with BleakClient(self.device_mac, loop=self.loop) as client:
+				logging.info("Client created")
 				self.client = client
 				while not client.is_connected:
 					await asyncio.sleep(0.1)
+				logging.info("Client is connected")
 				self.app.set_syncing(False, "Done!")
-				await client.start_notify(UART_RX_UUID, self.notification_handler)
+
+				service_collection = await client.get_services()
+				for c in service_collection.characteristics:
+					desc = service_collection.characteristics[c].description
+					if desc == "Nordic UART TX":
+						tx = service_collection.characteristics[c]
+					elif desc == "Nordic UART RX":
+						rx = service_collection.characteristics[c]
+
+				await client.start_notify(tx, self.notification_handler)
+				logging.info("Started notifications")
 
 				if self.last_command:
 					self.command_done_event.clear()
 					for char in self.last_command:
 						try:
-							await self.client.write_gatt_char(UART_TX_UUID, bytearray(bytes(char, 'utf-8')))
+							await self.client.write_gatt_char(rx, bytearray(bytes(char, 'utf-8')))
 						except BleakError:
 							self.command_event.set()
 							self.reconnect(countdown=5)
@@ -99,12 +115,15 @@ class MainThread(threading.Thread):
 						self.command_event.clear()
 						self.command_done_event.clear()
 						command = await self.cmd_queue.async_q.get()
+						logging.info("Received command")
 						try:
 							for char in command:
-								await self.client.write_gatt_char(UART_TX_UUID, bytearray(bytes(char, 'utf-8')))
+								await self.client.write_gatt_char(rx, bytearray(bytes(char, 'utf-8')))
+							logging.info("Done writing command, waiting until return")
 							if self.expecting_return > 0:
 								await self.command_done_event.wait()
 						except BleakError:
+							logging.warning("Failed to write, reconnecting...")
 							self.last_command = command
 							r = threading.Thread(target=self.reconnect)
 							r.run()
@@ -112,14 +131,16 @@ class MainThread(threading.Thread):
 					elif self.kill_event.is_set():
 						await self.client.disconnect()
 						return
+				logging.info("Reconnect invoked")
 				for i in range(0, self.reconnect_countdown):
 					self.app.set_syncing(True, "Reconnecting in {} seconds".format(self.reconnect_countdown-i))
-					time.sleep(1)
+					await asyncio.sleep(1)
 				self.app.set_syncing(True, "Reconnecting...")
 				self.reconnect_event.clear()
 				await self.client.disconnect()
 
 	def rtc(self):
+		logging.info("Starting RTC check")
 		self.app.set_syncing(True)
 		result = self.run_command('print(watch.rtc.get_localtime())', expect_return=True)[0]
 		time_check = re.match('\(([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+), ([0-9]+)\)', result)
@@ -134,6 +155,7 @@ class MainThread(threading.Thread):
 						(host_hms[2] - watch_hms[2])
 
 		if delta != 0:
+			logging.info("There is a RTC deviation, starting time sync")
 			self.app.set_syncing(True, desc="Syncing time...")
 			now = then = time.localtime()
 			while now[5] == then[5]:
@@ -141,16 +163,21 @@ class MainThread(threading.Thread):
 
 			self.run_command(f'watch.rtc.set_localtime(({now[0]}, {now[1]}, {now[2]}, {now[3]}, {now[4]}, {now[5]}, {now[6]}, {now[7]}))')
 
+		logging.info("RTC is done")
 		self.app.set_syncing(False, desc="Done!")
 
 	def run_command(self, cmd, expect_return=False):
+		logging.info("Running command {}".format(cmd))
 		self.cmd_queue.sync_q.join()
 		self.cmd_queue.sync_q.put(cmd + "\r")
+		logging.info("Added command to queue")
 		self.expecting_return = 2
 		self.command_event.set()
+		logging.info("Waiting for return value")
 		r = self.return_queue.sync_q.get()
 		self.return_queue.sync_q.task_done()
 		self.command_done_event.set()
+		logging.info("command '{}' done".format(cmd))
 		if expect_return:
 			return r
 
@@ -169,7 +196,9 @@ class ScanThread(threading.Thread):
 		WASP_NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
 		DFU_SERVICE_UUID = '00001530-1212-efde-1523-785feabcd123'
 
+		logging.info("Scanning for bluetooth devices")
 		devices = await BleakScanner.discover()
+		logging.info("Scan done")
 		for device in devices:
 			if WASP_NUS_SERVICE_UUID in device.metadata["uuids"]:
 				self.app.on_device_scanned(device.name, device.address)

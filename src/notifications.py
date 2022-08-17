@@ -33,7 +33,7 @@ class MainThread(threading.Thread):
 				"type='method_call', interface='org.gtk.Notifications', member='AddNotification'",
 				"type='signal', interface='org.freedesktop.Notifications', member='NotificationClosed'"
 			],
-			0,
+			dbus.types.UInt32(0),
 			dbus_interface='org.freedesktop.DBus.Monitoring'
 		)
 		self.session_bus.add_message_filter(self.on_message)
