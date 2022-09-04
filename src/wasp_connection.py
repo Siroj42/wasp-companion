@@ -76,68 +76,68 @@ class MainThread(threading.Thread):
 
 		self.app.set_syncing(True, "Connecting...")
 		while True:
-			async with BleakClient(self.device_mac, loop=self.loop) as client:
-				logging.info("Client created")
-				self.client = client
-				while not client.is_connected:
-					await asyncio.sleep(0.1)
-				logging.info("Client is connected")
-				self.app.set_syncing(False, "Done!")
+			try:
+				async with BleakClient(self.device_mac, loop=self.loop) as client:
+					logging.info("Client created")
+					self.client = client
+					#while not client.is_connected:
+					#	await asyncio.sleep(0.1)
+					logging.info("Client is connected")
+					self.app.set_syncing(False, "Done!")
 
-				service_collection = await client.get_services()
-				for c in service_collection.characteristics:
-					desc = service_collection.characteristics[c].description
-					if desc == "Nordic UART TX":
-						tx = service_collection.characteristics[c]
-					elif desc == "Nordic UART RX":
-						rx = service_collection.characteristics[c]
+					service_collection = await client.get_services()
+					for c in service_collection.characteristics:
+						desc = service_collection.characteristics[c].description
+						if desc == "Nordic UART TX":
+							tx = service_collection.characteristics[c]
+						elif desc == "Nordic UART RX":
+							rx = service_collection.characteristics[c]
 
-				await client.start_notify(tx, self.notification_handler)
-				logging.info("Started notifications")
+					await client.start_notify(tx, self.notification_handler)
+					logging.info("Started notifications")
 
-				if self.last_command:
-					self.command_done_event.clear()
-					for char in self.last_command:
-						try:
-							await self.client.write_gatt_char(rx, bytearray(bytes(char, 'utf-8')))
-						except BleakError:
-							self.command_event.set()
-							self.reconnect(countdown=5)
-					self.last_command = None
-					if self.expecting_return > 0:
-						await self.command_done_event.wait()
-
-				self.waspconn_ready_event.set()
-
-				while not self.reconnect_event.is_set():
-					await asyncio.wait([self.command_event.wait(), self.kill_event.wait(), self.reconnect_event.wait()], return_when=asyncio.FIRST_COMPLETED)
-					if self.command_event.is_set() and not self.reconnect_event.is_set():
-						self.command_event.clear()
+					if self.last_command:
 						self.command_done_event.clear()
-						command = await self.cmd_queue.async_q.get()
-						logging.info("Received command")
-						try:
-							for char in command:
+						for char in self.last_command:
+							try:
 								await self.client.write_gatt_char(rx, bytearray(bytes(char, 'utf-8')))
-							logging.info("Done writing command, waiting until return")
-							if self.expecting_return > 0:
-								await self.command_done_event.wait()
-						except BleakError:
-							logging.warning("Failed to write, reconnecting...")
-							self.last_command = command
-							r = threading.Thread(target=self.reconnect)
-							r.run()
-						self.cmd_queue.async_q.task_done()
-					elif self.kill_event.is_set():
-						await self.client.disconnect()
-						return
-				logging.info("Reconnect invoked")
-				for i in range(0, self.reconnect_countdown):
-					self.app.set_syncing(True, "Reconnecting in {} seconds".format(self.reconnect_countdown-i))
-					await asyncio.sleep(1)
-				self.app.set_syncing(True, "Reconnecting...")
-				self.reconnect_event.clear()
-				await self.client.disconnect()
+							except BleakError:
+								self.command_event.set()
+								self.reconnect(countdown=5)
+						self.last_command = None
+						if self.expecting_return > 0:
+							await self.command_done_event.wait()
+
+					self.waspconn_ready_event.set()
+
+					while not self.reconnect_event.is_set():
+						await asyncio.wait([self.command_event.wait(), self.kill_event.wait(), self.reconnect_event.wait()], return_when=asyncio.FIRST_COMPLETED)
+						if self.command_event.is_set() and not self.reconnect_event.is_set():
+							self.command_event.clear()
+							self.command_done_event.clear()
+							command = await self.cmd_queue.async_q.get()
+							logging.info("Received command")
+							try:
+								for char in command:
+									await self.client.write_gatt_char(rx, bytearray(bytes(char, 'utf-8')))
+								logging.info("Done writing command, waiting until return")
+								if self.expecting_return > 0:
+									await self.command_done_event.wait()
+							except BleakError:
+								logging.warning("Failed to write, reconnecting in 5 seconds")
+								self.last_command = command
+								r = threading.Thread(target=self.reconnect)
+								r.run()
+							self.cmd_queue.async_q.task_done()
+						elif self.kill_event.is_set():
+							await self.client.disconnect()
+							return
+					await self.on_reconnect()
+					await self.client.disconnect()
+			except BleakError:
+				logging.warning("Connection failed, retrying in 10 seconds")
+				self.reconnect_countdown = 10
+				await self.on_reconnect()
 
 	def rtc(self):
 		logging.info("Starting RTC check")
@@ -184,6 +184,14 @@ class MainThread(threading.Thread):
 	def reconnect(self, countdown=5):
 		self.reconnect_countdown = countdown
 		self.reconnect_event.set()
+
+	async def on_reconnect(self):
+		logging.info("Reconnect invoked")
+		for i in range(0, self.reconnect_countdown):
+			self.app.set_syncing(True, "Reconnecting in {} seconds".format(self.reconnect_countdown-i))
+			await asyncio.sleep(1)
+		self.app.set_syncing(True, "Reconnecting...")
+		self.reconnect_event.clear()
 
 class ScanThread(threading.Thread):
 	def __init__(self, app):
