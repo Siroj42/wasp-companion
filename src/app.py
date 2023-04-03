@@ -5,55 +5,36 @@ import gi
 import threading
 import pexpect
 import wasp_connection
+from logic import *
 import media_player
 import json
+from ui import *
 from pathlib import Path
 import notifications
 
-# UI library
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+#TODO: Finish GTK4 Port:
+#	1. [x] Find out why window contents do not render
+#	2. [x] Stop relying on app.objects
+#	3. [x] Reimplement signals handling
+#	4. [x] Port to Adw.Application
+#	5. [x] Refactor (maybe into different files?)
+#	6. [ ] UI updates
+#	  - [ ] Access Device Selector during normal operation
+#	  - [ ] Device overview page with reconnect & disconnect button
+#	7. [ ] Translations (start with German)
+
 # Mobile GTK widgets
-gi.require_version('Handy','1')
-from gi.repository import Handy
+gi.require_version('Adw','1')
+from gi.repository import Adw
 # Music player control
 gi.require_version('Playerctl', '2.0')
-from gi.repository import Playerctl, GLib
+from gi.repository import Playerctl, GLib, GObject
 # Gio
 from gi.repository import Gio
 
-# return true to prevent other signal handlers from deleting objects from the builder
-class Handler:
-	def _btnClose(self, *args):
-		# destroy window
-		app.window.destroy()
-		# set app.window to none, prompting window re-creation on next activation
-		app.window = None
-		return True
-
-	def _btnQuit(self, *args):
-		# release app (stop keeping it alive)
-		app.release()
-		# properly quit the app
-		app.quit()
-		# exit all threads
-		os._exit(1)
-
-	def _btnAbout(self, *args):
-		o("windowAbout").show()
-		return True
-	
-	def _closeAbout(self, *args):
-		o("windowAbout").hide()
-		return True
-
-	def _btnReconnect(self, *args):
-		app.threadW.reconnect()
-		return True
-
-class Companion(Gtk.Application):
+class Companion(Adw.Application):
 	def __init__(self):
-		Gtk.Application.__init__(self,
+		Adw.Application.__init__(self,
 			application_id="io.github.siroj42.WaspCompanion",
 			flags=Gio.ApplicationFlags.FLAGS_NONE)
 		self.window = None
@@ -78,10 +59,10 @@ class Companion(Gtk.Application):
 			self.threadW.join()
 		except:
 			print("threadW is not running yet")
-		Gtk.Application.quit(self)
+		Adw.Application.quit(self)
 
 	def do_startup(self):
-		Gtk.Application.do_startup(self)
+		Adw.Application.do_startup(self)
 		self.hold()
 
 		self.in_startup = True
@@ -100,7 +81,8 @@ class Companion(Gtk.Application):
 		self.select_device()
 
 	def connect(self, action_row, device_mac):
-		self.device_selector_window.close()
+		print("connecting...")
+		self.window.device_selector_window.close()
 
 		self.config["last_device"] = device_mac
 
@@ -125,71 +107,37 @@ class Companion(Gtk.Application):
 # change the parts of the UI relevant to syncing: Sync spinner and sync label.
 	def set_syncing(self, active, desc="Checking if time is synced..."):
 		if active:
-			self.o("spnInitializing").start()
+			self.window.spnInitializing.start()
 		else:
-			self.o("spnInitializing").stop()
-		self.o("lblInitializing").set_label(desc)
+			self.window.spnInitializing.stop()
+		self.window.lblInitializing.set_label(desc)
 		self.sync_desc_str = desc
 		self.sync_activity = active
 
 	def create_window(self):
-		Gtk.init()
-		Handy.init()
-		global builder
-		builder = Gtk.Builder()
-		builder.add_from_file("/app/bin/app.ui")
-		builder.connect_signals(Handler())
-		self.objects = builder.get_objects()
-		self.window = self.o("window")
+		Adw.init()
+
+		self.window = MainWindow(self)
 		self.window.set_application(self)
-		self.device_selector_window = self.o("device_selector_window")
-		self.device_selector_window.set_transient_for(self.window)
+		self.window.device_manager_button_clicked()
 
 		if not self.in_startup:
 			# skip in startup because sync_activity and sync_desc_str are not available yet
 			self.set_syncing(self.sync_activity, self.sync_desc_str)
 
-		self.window.show_all()
-
 	def select_device(self):
-		self.device_selector_window.show_all()
-
+		print("Starting scan thread...")
 		self.threadS = wasp_connection.ScanThread(self)
 		self.threadS.start()
 
-	def on_device_scanned(self, name, address, type="nus", version="0"):
-		if address == self.config["last_device"]:
-			self.connect(None, address)
-			return
-		devrow = Handy.ActionRow()
-		devrow.set_title(name)
-		devrow.set_activatable_widget(devrow)
-		devrow.set_activatable_widget(None)
-		if type=="nus":
-			devrow.set_subtitle("Wasp-OS")
-			devrow.connect("activated", self.connect, address)
-		elif type=="infinitime":
-			devrow.set_subtitle("InfiniTime")
-			devrow.connect("activated", print, "There currently is no way to connect to InfiniTime devices")
-		elif type=="dfu":
-			devrow.set_subtitle("Wasp-OS (Bootloader)")
-			devrow.connect("activated", print, "There currently is no way to connect to the Wasp-OS Bootloader")
+	def on_device_scanned(self, name, address, software=DeviceSoftware.WASP, version="0"):
+		self.window.device_selector_window.add_row(name, software, DeviceType.PINETIME, self.connect, address)
 
-		self.o("device_selector_device_list").insert(devrow, 0)
-		devrow.show()
-
-	def o(self, name):
-		for i in range(0, len(self.objects)):
-			if self.objects[i].get_name() == name:
-				return self.objects[i]
-		return -1
-
-# Fuction for grabbing UI objects
-def o(name):
-	for i in range(0,len(app.objects)):
-		if app.objects[i].get_name() == name:
-			return app.objects[i]
-	return -1
+	@GObject.Signal
+	def button_close(self):
+		print("Closing window...")
+		self.destroy()
+		self.app.window = None
 
 if __name__ == "__main__":
 	global app

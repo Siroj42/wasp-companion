@@ -5,6 +5,7 @@ import asyncio
 import janus
 from bleak import BleakClient, BleakScanner
 from bleak.exc import BleakError
+from logic import *
 import re
 import logging
 
@@ -52,7 +53,10 @@ class MainThread(threading.Thread):
 				if result:
 					result_dict = json.loads(self.line)
 					if result_dict["t"] == "music":
-						self.app.threadP.process_watchcmd(result_dict["n"])
+						try:
+							self.app.threadP.process_watchcmd(result_dict["n"])
+						except:
+							logging.error("Problem occured while trying to process watch command")
 				if self.expecting_return == 2:
 					self.return_value = []
 					self.expecting_return = 1
@@ -212,6 +216,6 @@ class ScanThread(threading.Thread):
 				self.app.on_device_scanned(device.name, device.address)
 			elif DFU_SERVICE_UUID in device.metadata["uuids"]:
 					if device.name.startswith("InfiniTime") or device.name.startswith("Pinetime-JF") or device.name.startswith("PineTime") or device.name.startswith("Y7S"):
-						self.app.on_device_scanned(device.name, device.address, type="infinitime")
+						self.app.on_device_scanned(device.name, device.address, software=DeviceSoftware.INFINITIME)
 					elif device.name.startswith("PineDFU"):
-						self.app.on_device_scanned(device.name, device.address, type="dfu")
+						self.app.on_device_scanned(device.name, device.address, software=DeviceSoftware.DFU)

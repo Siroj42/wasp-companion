@@ -1,0 +1,25 @@
+using Gtk 4.0;
+using Adw 1;
+
+template DeviceSelectorWindow: Adw.Window {
+  modal: true;
+  name: "device_selector_window";
+
+  Gtk.Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      [title]
+      Gtk.Label device_selector_window_title {
+        name: "device_selector_window_title";
+        label: _("Select Device");
+      }
+    }
+    Gtk.ListBox device_selector_device_list {
+      styles ["content"]
+      name: "device_selector_device_list";
+    }
+  }
+
+  destroy => on_closed();
+}

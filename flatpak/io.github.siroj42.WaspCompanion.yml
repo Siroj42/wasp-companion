@@ -1,5 +1,4 @@
 app-id: io.github.siroj42.WaspCompanion
-# Libhandy apparently depends on vala, so the freedesktop platform is not enough
 runtime: org.gnome.Platform
 runtime-version: '42'
 sdk: org.gnome.Sdk
@@ -30,14 +29,27 @@ modules:
     sources:
       - type: git
         url: https://github.com/altdesktop/playerctl.git
+  - name: "blueprint-compiler"
+    buildsystem: "meson"
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/jwestman/blueprint-compiler
+        tag: v0.6.0
   - name: companion
     buildsystem: simple
     subdir: src
     build-commands:
+      - mkdir ui
+      - mkdir -p /app/data
+      - blueprint-compiler batch-compile ui/ blueprints/ blueprints/window.blp blueprints/device_selector.blp
+      - cp -r ui/ /app/data/ui/
+      - cp -r icons/ /app/data/icons/
       - install -D app.py /app/bin/app.py
+      - install -D logic.py /app/bin/logic.py
       - cp -r bleak/bleak /app/bin/bleak
       - install -D wasp_connection.py /app/bin/wasp_connection.py
       - install -D media_player.py /app/bin/media_player.py
+      - install -D ui.py /app/bin/ui.py
       - install -D app.ui /app/bin/app.ui
       - install -D run.sh /app/bin/run.sh
       - install -D wasptool /app/bin/wasptool

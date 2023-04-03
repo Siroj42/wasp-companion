@@ -1,0 +1,87 @@
+using Gtk 4.0;
+using Adw 1;
+
+Gtk.Popover hamburgerPopover {
+  Gtk.Box {
+    orientation: vertical;
+    Gtk.Button {
+      styles ["flat", "body"]
+      label: _("About Wasp Companion");
+      clicked => about_button_clicked();
+    }
+    Gtk.Button {
+      styles ["flat", "body"]
+      label: _("Quit");
+      clicked => quit_button_clicked();
+    }
+  }
+}
+
+template MainWindow: Adw.ApplicationWindow {
+  Gtk.Box {
+    orientation: vertical;
+    Adw.HeaderBar {
+      centering-policy: strict;
+      Gtk.Button btnReconnect {
+        tooltip-text: _("Reconnect");
+        icon-name: "view-refresh-symbolic";
+        clicked => reconnect_button_clicked();
+      }
+      Gtk.Button btnDeviceManager {
+        tooltip-text: _("Manage Devices");
+        icon-name: "smartwatch-symbolic";
+        clicked => device_manager_button_clicked();
+      }
+      [title]
+      Adw.ViewSwitcherTitle viewSwitcherTitle {
+        stack: stack;
+        title: _("Wasp Companion");
+      }
+      [end]
+      Gtk.MenuButton hamburgerButton {
+        popover: hamburgerPopover;
+        icon-name: "open-menu-symbolic";
+      }
+    }
+    Adw.ViewStack stack {
+      vexpand: true;
+
+      Adw.ViewStackPage {
+        name: "pageHome";
+        title: _("Home");
+        icon-name: "user-home-symbolic";
+        child: Gtk.Box home_page_box {
+          orientation: vertical;
+
+          Gtk.Label lblInitializing {
+            styles ["title-1"]
+
+            name: "lblInitializing";
+            valign: center;
+            vexpand: true;
+            label: _("Connecting...");
+          }
+          Gtk.Spinner spnInitializing {
+            name: "spnInitializing";
+            valign: center;
+            vexpand: true;
+            spinning: true;
+          }
+        };
+      }
+      Adw.ViewStackPage {
+        name: "stackUpdates";
+        title: _("Updates");
+        icon-name: "folder-download-symbolic";
+        child: Gtk.Label {
+          label: "Updates";
+        };
+      }
+    }
+    Adw.ViewSwitcherBar viewSwitcherBar {
+      stack: stack;
+      reveal: bind viewSwitcherTitle.title-visible;
+    }
+  }
+  destroy => close_button_clicked();
+}
